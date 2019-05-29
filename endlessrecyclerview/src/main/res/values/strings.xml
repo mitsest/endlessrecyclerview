@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">EndlessRecyclerView</string>
+    <string name="endless_recycler_view_retry">Retry</string>
+    <string name="endless_recycler_view_dismiss">Dismiss</string>
+</resources>

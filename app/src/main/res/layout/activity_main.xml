@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--<androidx.core.widget.NestedScrollView-->
+<!--android:layout_width="match_parent"-->
+<!--android:layout_height="wrap_content">-->
+
+<FrameLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".MainActivity">
+
+    <com.mitsest.endlessrecyclerview.EndlessRecyclerView
+            android:id="@+id/activity_main_persons_list"
+            android:orientation="vertical"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            app:scrollEndGravity="bottom"
+            app:spanCount="2"
+            app:progressBarViewId="@+id/activity_main_progress_bar"/>
+
+    <ProgressBar
+            android:id="@+id/activity_main_progress_bar"
+            android:layout_gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+</FrameLayout>
