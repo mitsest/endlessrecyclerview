@@ -3,7 +3,7 @@ package com.mitsest.endlessrecyclerexample
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
-import com.mitsest.endlessrecyclerview.EndlessRecyclerViewAdapter
+import com.mitsest.endlessrecyclerview.EndlessRecyclerView
 import dagger.android.DaggerActivity
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.observers.DisposableSingleObserver
@@ -11,7 +11,7 @@ import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_main.*
 import javax.inject.Inject
 
-interface MainActivityPersonsListScrollEndListener : EndlessRecyclerViewAdapter.ScrollEndListener {
+interface MainActivityPersonsListScrollEndListener : EndlessRecyclerView.ScrollEndListener {
     override fun onScrollEnd(page: Int) {
         onPersonsListScrollEnd(page)
     }
@@ -23,7 +23,7 @@ class MainActivity : DaggerActivity(), MainActivityPersonsListScrollEndListener 
     @Inject
     lateinit var personApiClient: PersonApiClient
 
-    private val personsListAdapter by lazy { PersonsListAdapter(this) }
+    private val personsListAdapter by lazy { PersonsListAdapter() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +67,6 @@ class MainActivity : DaggerActivity(), MainActivityPersonsListScrollEndListener 
     }
 
     private fun onRequestError(e: Throwable) {
-        personsListAdapter.onRequestError(e.message)
+
     }
 }

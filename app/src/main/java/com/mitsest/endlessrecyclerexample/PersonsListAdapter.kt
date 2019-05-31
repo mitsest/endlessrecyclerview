@@ -6,11 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.mitsest.endlessrecyclerview.EndlessRecyclerViewAdapter
 
-class PersonsListAdapter(scrollEndListener: ScrollEndListener) :
-
-    EndlessRecyclerViewAdapter<PersonsListAdapter.PersonViewHolder>(scrollEndListener) {
+class PersonsListAdapter : RecyclerView.Adapter<PersonsListAdapter.PersonViewHolder>() {
 
     private var personsList = listOf<Person>()
 
