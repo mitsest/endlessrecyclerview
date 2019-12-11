@@ -97,8 +97,8 @@ class EndlessRecyclerView : RecyclerView,
     companion object {
         const val DEFAULT_PAGE = 1
         const val DEFAULT_SCROLL_END_GRAVITY = ScrollEndGravity.BOTTOM
-        const val DEFAULT_PROGRESS_BAR_VIEW_ID = -1
-        const val DEFAULT_SWIPE_TO_REFRESH_VIEW_ID = -1
+        const val DEFAULT_PROGRESS_BAR_VIEW_ID = View.NO_ID
+        const val DEFAULT_SWIPE_TO_REFRESH_VIEW_ID = View.NO_ID
         const val DEFAULT_TOTAL_PAGES = -1
     }
 
@@ -117,7 +117,6 @@ class EndlessRecyclerView : RecyclerView,
 
     private val restorer = StateRestorer(this)
 
-    // Views
     private var nestedScrollViewParent: WeakReference<NestedScrollView>? = null
     private var progressBar: WeakReference<View>? = null
     private var swipeRefreshLayout: WeakReference<SwipeRefreshLayout>? = null
@@ -228,7 +227,6 @@ class EndlessRecyclerView : RecyclerView,
     }
 
 
-    // XML arguments initialization logic
     private fun initArgs(context: Context, attrs: AttributeSet?, defStyleAttr: Int) {
         attrs ?: return
 

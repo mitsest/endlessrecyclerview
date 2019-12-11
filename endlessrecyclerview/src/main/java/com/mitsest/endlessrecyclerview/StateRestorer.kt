@@ -1,6 +1,3 @@
-/**
- * As seen on https://github.com/saket/InboxRecyclerView/blob/master/inboxrecyclerview/src/main/java/me/saket/inboxrecyclerview/StateRestorer.kt
- */
 package com.mitsest.endlessrecyclerview
 
 import android.os.Parcelable
