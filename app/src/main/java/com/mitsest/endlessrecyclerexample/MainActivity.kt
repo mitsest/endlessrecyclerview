@@ -3,6 +3,7 @@ package com.mitsest.endlessrecyclerexample
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
+import android.view.View
 import com.mitsest.endlessrecyclerview.EndlessRecyclerView
 import dagger.android.DaggerActivity
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -30,6 +31,7 @@ class MainActivity : DaggerActivity(), MainActivityPersonsListScrollEndListener 
 
         setContentView(R.layout.activity_main)
         activity_main_persons_list?.adapter = personsListAdapter
+        activity_main_persons_list?.setScrollEndListener(this)
         request(page = 1)
     }
 
@@ -39,6 +41,8 @@ class MainActivity : DaggerActivity(), MainActivityPersonsListScrollEndListener 
 
     @SuppressLint("CheckResult")
     private fun request(page: Int) {
+
+            activity_main_progress_bar.visibility = View.VISIBLE
 
             personApiClient.getPersons(page)
                 .subscribeOn(Schedulers.io())
@@ -64,9 +68,10 @@ class MainActivity : DaggerActivity(), MainActivityPersonsListScrollEndListener 
 
     private fun onRequestSuccess(t: PersonListResponse) {
         personsListAdapter.addPersons(t.results)
+        activity_main_progress_bar.visibility = View.GONE
     }
 
     private fun onRequestError(e: Throwable) {
-
+        activity_main_progress_bar.visibility = View.GONE
     }
 }

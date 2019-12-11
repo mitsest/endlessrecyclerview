@@ -1,14 +1,16 @@
 package com.mitsest.endlessrecyclerview
 
 import android.content.Context
+import android.os.Parcelable
 import android.util.AttributeSet
 import android.view.View
-import android.widget.FrameLayout
 import androidx.annotation.IdRes
 import androidx.annotation.IntDef
 import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.lang.ref.WeakReference
+import kotlin.math.abs
 
 
 @Retention(AnnotationRetention.SOURCE)
@@ -43,36 +45,46 @@ interface EndlessRecyclerViewOnScrollListenerImpl {
     }
 }
 
-class EndlessRecyclerViewOnScrollListener(
-    private val impl: EndlessRecyclerViewOnScrollListenerImpl
+class RecyclerViewOnScrollListener(
+    impl: EndlessRecyclerViewOnScrollListenerImpl?
 ) :
     RecyclerView.OnScrollListener() {
 
+    private val impl = WeakReference(impl)
 
     override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
         super.onScrollStateChanged(recyclerView, newState)
 
+        val mImpl = impl.get()
+        mImpl ?: return
+
         if (newState != RecyclerView.SCROLL_STATE_IDLE) return
 
-        impl.processScrollStateChanged()
+        mImpl.processScrollStateChanged()
     }
 }
 
 class NestedScrollViewOnScrollListener(
-    private val impl: EndlessRecyclerViewOnScrollListenerImpl
+    impl: EndlessRecyclerViewOnScrollListenerImpl
 ) :
     NestedScrollView.OnScrollChangeListener {
+
+    private val impl = WeakReference(impl)
+
     override fun onScrollChange(v: NestedScrollView?, scrollX: Int, scrollY: Int, oldScrollX: Int, oldScrollY: Int) {
-        if (impl.scrollEndGravity == ScrollEndGravity.TOP && scrollY == 0) {
-            impl.processScrollStateChanged()
+        val mImpl = impl.get()
+        mImpl ?: return
+
+        if (mImpl.scrollEndGravity == ScrollEndGravity.TOP && scrollY == 0) {
+            mImpl.processScrollStateChanged()
             return
         }
 
         v?.run {
             val childMeasuredHeight = getChildAt(0)?.measuredHeight ?: return@run
 
-            if (impl.scrollEndGravity == ScrollEndGravity.BOTTOM && scrollY == Math.abs(measuredHeight - childMeasuredHeight)) {
-                impl.processScrollStateChanged()
+            if (mImpl.scrollEndGravity == ScrollEndGravity.BOTTOM && scrollY == abs(measuredHeight - childMeasuredHeight)) {
+                mImpl.processScrollStateChanged()
             }
         }
     }
@@ -86,21 +98,37 @@ class EndlessRecyclerView : RecyclerView,
         const val DEFAULT_PAGE = 1
         const val DEFAULT_SCROLL_END_GRAVITY = ScrollEndGravity.BOTTOM
         const val DEFAULT_PROGRESS_BAR_VIEW_ID = -1
+        const val DEFAULT_SWIPE_TO_REFRESH_VIEW_ID = -1
+        const val DEFAULT_TOTAL_PAGES = -1
     }
 
     @IdRes
     private var progressBarViewId = DEFAULT_PROGRESS_BAR_VIEW_ID
 
+    @IdRes
+    private var swipeToRefreshViewId = DEFAULT_SWIPE_TO_REFRESH_VIEW_ID
+
     var page: Int = DEFAULT_PAGE
+
+    // Update this variable to support canceling requests when totalPages is reached
+    var totalPages: Int = DEFAULT_TOTAL_PAGES
+
     override var scrollEndGravity: Int = DEFAULT_SCROLL_END_GRAVITY
 
-    // Views
-    private var nestedScrollViewParent: NestedScrollView? = null
-    private var progressBar: View? = null
-    private val recyclerViewOnScrollListener by lazy { EndlessRecyclerViewOnScrollListener(this) }
-    private val nestedScrollViewOnScrollListener by lazy { NestedScrollViewOnScrollListener(this) }
+    private val restorer = StateRestorer(this)
 
-    var scrollEndListener: ScrollEndListener? = null
+    // Views
+    private var nestedScrollViewParent: WeakReference<NestedScrollView>? = null
+    private var progressBar: WeakReference<View>? = null
+    private var swipeRefreshLayout: WeakReference<SwipeRefreshLayout>? = null
+    private var recyclerViewOnScrollListener = RecyclerViewOnScrollListener(this)
+    private val nestedScrollViewOnScrollListener = NestedScrollViewOnScrollListener(this)
+
+    private var scrollEndListener: WeakReference<ScrollEndListener>? = null
+
+    fun setScrollEndListener(scrollEndListener: ScrollEndListener) {
+        this.scrollEndListener = WeakReference(scrollEndListener)
+    }
 
     constructor(context: Context) : this(context, null)
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, -1)
@@ -108,7 +136,20 @@ class EndlessRecyclerView : RecyclerView,
 
         initArgs(context, attrs, defStyleAttr)
         addOnScrollListener(recyclerViewOnScrollListener)
+    }
 
+    public override fun onSaveInstanceState(): Parcelable? {
+        val state = super.onSaveInstanceState()
+        state?.run {
+            return restorer.save(state)
+        }
+
+        return state
+    }
+
+    public override fun onRestoreInstanceState(state: Parcelable) {
+        val superState = restorer.restore(state)
+        super.onRestoreInstanceState(superState)
     }
 
     override fun onAttachedToWindow() {
@@ -117,6 +158,12 @@ class EndlessRecyclerView : RecyclerView,
         setNestedScrollViewParent()
         addNestedScrollViewOnScrollListener()
         addProgressBar()
+        addSwipeRefreshLayout()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        adapter = null
     }
 
     private fun setNestedScrollViewParent() {
@@ -124,7 +171,7 @@ class EndlessRecyclerView : RecyclerView,
         while (mParent != null) {
 
             if (mParent is NestedScrollView) {
-                nestedScrollViewParent = mParent
+                nestedScrollViewParent = WeakReference(mParent)
                 break
             }
 
@@ -133,7 +180,7 @@ class EndlessRecyclerView : RecyclerView,
     }
 
     private fun addNestedScrollViewOnScrollListener() {
-        nestedScrollViewParent?.run {
+        nestedScrollViewParent?.get()?.run {
             setOnScrollChangeListener(nestedScrollViewOnScrollListener)
         }
     }
@@ -142,7 +189,15 @@ class EndlessRecyclerView : RecyclerView,
     private fun addProgressBar() {
         if (progressBarViewId != DEFAULT_PROGRESS_BAR_VIEW_ID) {
             rootView?.findViewById<View>(progressBarViewId)?.run {
-                progressBar = this
+                progressBar = WeakReference(this)
+            }
+        }
+    }
+
+    private fun addSwipeRefreshLayout() {
+        if (swipeToRefreshViewId != DEFAULT_SWIPE_TO_REFRESH_VIEW_ID) {
+            rootView?.findViewById<SwipeRefreshLayout>(swipeToRefreshViewId)?.run {
+                swipeRefreshLayout = WeakReference(this)
             }
         }
     }
@@ -152,7 +207,7 @@ class EndlessRecyclerView : RecyclerView,
         if (itemCount == 0) return true
 
         return super.canScrollHorizontally(direction)
-                || nestedScrollViewParent?.canScrollHorizontally(direction) == true
+                || nestedScrollViewParent?.get()?.canScrollHorizontally(direction) == true
 
     }
 
@@ -161,14 +216,15 @@ class EndlessRecyclerView : RecyclerView,
         if (itemCount == 0) return true
 
         return super.canScrollVertically(direction)
-                || nestedScrollViewParent?.canScrollVertically(direction) == true
+                || nestedScrollViewParent?.get()?.canScrollVertically(direction) == true
     }
 
     override fun onScrollListenerImplScrollEnd() {
-        if (isProgressBarVisible()) return
+        if ((totalPages != DEFAULT_TOTAL_PAGES && page >= totalPages) || isProgressBarVisible() || swipeLayoutRefreshing()) {
+            return
+        }
 
-        // Notify context through recycler view's adapter
-        scrollEndListener?.onScrollEnd(++page)
+        scrollEndListener?.get()?.onScrollEnd(++page)
     }
 
 
@@ -180,11 +236,21 @@ class EndlessRecyclerView : RecyclerView,
 
         try {
             scrollEndGravity = a.getInt(R.styleable.EndlessRecyclerView_scrollEndGravity, DEFAULT_SCROLL_END_GRAVITY)
+
             progressBarViewId =
                 a.getResourceId(R.styleable.EndlessRecyclerView_progressBarViewId, DEFAULT_PROGRESS_BAR_VIEW_ID)
 
-            if (progressBarViewId == DEFAULT_PROGRESS_BAR_VIEW_ID) {
-                throw NotImplementedError("This view does not work without a progress bar. Please add an app:progressBarViewId property to your EndlessRecyclerView XML element")
+            swipeToRefreshViewId =
+                a.getResourceId(
+                    R.styleable.EndlessRecyclerView_swipeRefreshLayoutId,
+                    DEFAULT_SWIPE_TO_REFRESH_VIEW_ID
+                )
+
+            if (progressBarViewId == DEFAULT_PROGRESS_BAR_VIEW_ID && swipeToRefreshViewId == DEFAULT_SWIPE_TO_REFRESH_VIEW_ID) {
+                throw NotImplementedError(
+                    "This view does not work without a progress bar or SwipeRefreshLayout." +
+                            "Please add an app:progressBarViewId or app:swipeRefreshLayoutId property to your EndlessRecyclerView XML element"
+                )
             }
 
         } finally {
@@ -192,12 +258,9 @@ class EndlessRecyclerView : RecyclerView,
         }
     }
 
-    private fun isProgressBarVisible() = progressBar?.visibility == View.VISIBLE
+    private fun isProgressBarVisible() = progressBar?.get()?.visibility == View.VISIBLE
 
-    private fun showProgress() {
-        progressBar?.visibility = View.VISIBLE
-    }
-
+    private fun swipeLayoutRefreshing() = swipeRefreshLayout?.get()?.isRefreshing == true
 
     interface ScrollEndListener {
         fun onScrollEnd(page: Int)

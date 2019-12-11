@@ -9,5 +9,6 @@
             <enum name="bottom" value="3"/>
         </attr>
         <attr name="progressBarViewId" format="reference" />
+        <attr name="swipeRefreshLayoutId" format="reference"/>
     </declare-styleable>
 </resources>
