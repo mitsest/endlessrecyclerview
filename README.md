@@ -34,4 +34,6 @@ To use it
 
 ```
 
-A progress bar or a swipe refresh layout is required, in  order for the custom view to check if it's already fetching data. It's your obligation to show/hide the progressbar
+A progress bar or a swipe refresh layout is required, in  order for the custom view to check if it's already fetching data. It's your obligation to show/hide the progressbar.
+
+app:scrollEndGravity can be bottom, right, left and top
